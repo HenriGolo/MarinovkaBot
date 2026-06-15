@@ -56,6 +56,14 @@ class MarinovkaBot(discord.AutoShardedBot):
             Sanitizer(message).sanitize()
         )
 
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        if before.id == self.user.id:
+            if after.nick is not None or after.display_name != self.user.name:
+                role: discord.Role = next(filter(lambda r: r.name == before.display_name, after.roles))
+                await role.edit(name=after.nick)
+                await self.user.edit(username=after.nick)
+                await after.edit(nick=None)
+
 
 if __name__ == '__main__':
     MarinovkaBot(intents=discord.Intents.all()).run(token=config['TOKEN'])
