@@ -28,12 +28,16 @@ class MarinovkaBot(discord.AutoShardedBot):
         await super().close()
 
     async def on_ready(self):
+        # Début du bot
         self.start_time = now(True)
+
+        # Thread de logs
         marinovka = await self.fetch_guild(config['GUILD_ID'])
         channel_dev = await marinovka.fetch_channel(config['CHANNEL_ID'])
         thread = await channel_dev.create_thread(name=f"Logs {self.start_time.replace(microsecond=0)}")
         await thread.send(self.invite_url)
         config.set_log_channel(thread)
+        # Print dans la console
         print(f"Connecté en tant que {self.user}")
 
 
