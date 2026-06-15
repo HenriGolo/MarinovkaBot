@@ -19,10 +19,7 @@ class MarinovkaBot(discord.AutoShardedBot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for cog in MarinovCog.__subclasses__():
-            print(f"Adding cog {cog}")
-        cog = HelloWorld(self)
-        self.add_cog(cog)
-        print(self.commands)
+            self.add_cog(cog(self))
 
     async def close(self):
         await config.channel_logs.send(f"Terminaison en douceur, uptime {now(True) - self.start_time}")
