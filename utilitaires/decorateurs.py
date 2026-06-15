@@ -21,6 +21,8 @@ def logger(func):
             embed = Embed(title=func.__name__, color=0xff0000)
             embed.description = f"```python\n{err.strip()}\n```"
             await config.channel_logs.send(embed=embed)
+            if hasattr(args[1], "respond"):
+                await args[1].respond(embed=embed)
 
         else:  # Sera exécuté si aucune exception n'est soulevée
             embed = Embed(title=func.__name__, color=0x00ff00)
