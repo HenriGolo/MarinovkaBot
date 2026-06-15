@@ -1,13 +1,18 @@
 import os
+import sys
 
 import discord
 import dotenv
 
 
 class Config:
-    def __init__(self, env):
+    def __init__(self, envs):
         self.values = {
-            **dotenv.dotenv_values(env),
+            **{
+                k: v
+                for env in envs
+                for k, v in dotenv.dotenv_values(env).items()
+            },
             **os.environ,
         }
         self.channel_logs: discord.Thread = None
@@ -22,4 +27,4 @@ class Config:
         self.channel_logs = channel
 
 
-config = Config('.env')
+config = Config(sys.argv[1:] if len(sys.argv) > 1 else ['.env'])
