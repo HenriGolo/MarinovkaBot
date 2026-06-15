@@ -3,7 +3,6 @@ import traceback
 from zoneinfo import ZoneInfo
 
 import discord
-import pytz
 
 
 class Timestamp:
