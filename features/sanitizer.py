@@ -37,6 +37,10 @@ class AddException(discord.ui.DesignerModal):
             f"Liste des exceptions pour {netloc} : {', '.join(exceptions[netloc])}",
             ephemeral=True
         )
+        # Rerun l'analyse des liens
+        message = interaction.message
+        source = await interaction.channel.fetch_message(message.reference.message_id)
+        await Sanitizer(source).sanitize(message=message)
 
 
 class Sanitizer:
@@ -65,8 +69,8 @@ class Sanitizer:
         queries = {k: v for k, v in parse_qs(url.query).items() if k in allowed}
         return url._replace(query=urlencode(queries, doseq=True))
 
-    async def sanitize(self):
-        if not self.message.author.bot:
+    async def sanitize(self, *, message: discord.Message = None):
+        if True or not self.message.author.bot:
             urls = self.extract()
             if urls:
                 embed = Embed(
@@ -90,4 +94,7 @@ class Sanitizer:
                     view.add_item(discord.ui.Button(**kwargs))
                 title = "Ajouter des Exceptions"
                 view.add_item(ButtonModal(AddException(surls, title=title), label=title))
-                await self.message.reply(embed=embed, view=view, mention_author=False, silent=True)
+                if message is None:
+                    await self.message.reply(embed=embed, view=view, mention_author=False, silent=True)
+                else:
+                    await message.edit(embed=embed, view=view)
