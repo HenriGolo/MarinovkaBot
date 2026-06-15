@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import urllib.parse
 
@@ -46,6 +47,12 @@ class MarinovkaBot(discord.AutoShardedBot):
 
         # Print dans la console
         print(f"Connecté en tant que {self.user}")
+
+    @staticmethod
+    async def on_message(message: discord.Message):
+        # lance une liste de coroutines en parallèle
+        await asyncio.gather(
+        )
 
 
 if __name__ == '__main__':
