@@ -79,7 +79,7 @@ class Sanitizer:
         return url._replace(query=urlencode(queries, doseq=True))
 
     async def sanitize(self, *, message: discord.Message = None):
-        if True or not self.message.author.bot:
+        if not self.message.author.bot:
             urls = self.extract()
             if urls:
                 embed = Embed(
@@ -88,7 +88,10 @@ class Sanitizer:
                 )
                 view = discord.ui.View()
                 surls = list(map(self._sanitize, urls))
-                for surl in surls:
+                for i, surl in enumerate(surls):
+                    if urlunsplit(surl) == urlunsplit(urls[i]):
+                        continue
+
                     url = urlunsplit(surl)
                     embed.description += f"{url}\n"
                     kwargs = {
@@ -101,9 +104,14 @@ class Sanitizer:
                             ).title(),
                     }
                     view.add_item(discord.ui.Button(**kwargs))
-                title = "Ajouter des Exceptions"
-                view.add_item(ButtonModal(AddException(surls, title=title), label=title))
-                if message is None:
-                    await self.message.reply(embed=embed, view=view, mention_author=False, silent=True)
+                if view.children:
+                    title = "Ajouter des Exceptions"
+                    view.add_item(ButtonModal(AddException(surls, title=title), label=title))
+                    if message is None:
+                        await self.message.reply(embed=embed, view=view, mention_author=False, silent=True)
+                    else:
+                        await message.edit(embed=embed, view=view)
+                elif message is None:
+                    await self.message.reply("C'est bien, tu as nettoyé tes liens", mention_author=False, silent=True, delete_after=1)
                 else:
-                    await message.edit(embed=embed, view=view)
+                    await message.delete()
