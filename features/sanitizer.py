@@ -3,7 +3,7 @@ from urllib.parse import urlsplit, SplitResult, parse_qs, urlunsplit, urlencode
 
 import discord
 
-from utilitaires import Embed, ButtonModal
+from utilitaires import Embed, ButtonModal, fail
 from utilitaires.config import config
 
 
@@ -38,9 +38,18 @@ class AddException(discord.ui.DesignerModal):
             ephemeral=True
         )
         # Rerun l'analyse des liens
-        message = interaction.message
-        source = await interaction.channel.fetch_message(message.reference.message_id)
-        await Sanitizer(source).sanitize(message=message)
+        try:
+            message = interaction.message
+            source = await interaction.channel.fetch_message(message.reference.message_id)
+            await Sanitizer(source).sanitize(message=message)
+        except Exception:
+            await config.channel_logs.send(
+                embed=Embed(
+                    title="Sanitizer - rerun",
+                    description=f"```python\n{fail().strip()}\n```",
+                    color=0x00ff00
+                )
+            )
 
 
 class Sanitizer:
