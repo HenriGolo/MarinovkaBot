@@ -8,12 +8,7 @@ from utilitaires.config import config
 
 class MarinovkaBot(discord.AutoShardedBot):
     start_time: datetime.datetime
-    invite_url = 'https://discord.com/oauth2/authorize?' + urllib.parse.urlencode({
-        'client_id': config['CLIENT_ID'],
-        'permissions': 8,  # Administrateur https://docs.discord.com/developers/topics/permissions
-        'integration_type': 0,
-        'scope': 'bot+applications.commands',
-    })
+    invite_url: str
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -30,6 +25,13 @@ class MarinovkaBot(discord.AutoShardedBot):
     async def on_ready(self):
         # Début du bot
         self.start_time = now(True)
+
+        self.invite_url = 'https://discord.com/oauth2/authorize?' + urllib.parse.urlencode({
+            'client_id': self.user.id,
+            'permissions': 8,  # Administrateur https://docs.discord.com/developers/topics/permissions
+            'integration_type': 0,
+            'scope': 'bot+applications.commands',
+        })
 
         # Thread de logs
         marinovka = await self.fetch_guild(config['GUILD_ID'])
