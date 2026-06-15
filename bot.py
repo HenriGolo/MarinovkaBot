@@ -37,6 +37,11 @@ class MarinovkaBot(discord.AutoShardedBot):
         thread = await channel_dev.create_thread(name=f"Logs {self.start_time.replace(microsecond=0)}")
         await thread.send(self.invite_url)
         config.set_log_channel(thread)
+
+        # Message de statut du bot
+        activity = discord.Activity(name=marinovka.name, type=discord.ActivityType.watching)
+        await self.change_presence(activity=activity)
+
         # Print dans la console
         print(f"Connecté en tant que {self.user}")
 
