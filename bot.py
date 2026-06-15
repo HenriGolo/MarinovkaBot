@@ -1,7 +1,7 @@
 import datetime
 import urllib.parse
 
-from cogs import *
+from features import *
 from utilitaires import now
 from utilitaires.config import config
 
