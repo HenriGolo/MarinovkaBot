@@ -8,13 +8,12 @@ from utilitaires.config import config
 
 class MarinovkaBot(discord.AutoShardedBot):
     start_time: datetime.datetime
-    invite_url_params = {
+    invite_url = 'https://discord.com/oauth2/authorize?' + urllib.parse.urlencode({
         'client_id': config['CLIENT_ID'],
-        'permissions': 8,  # Administrateur
+        'permissions': 8,  # Administrateur https://docs.discord.com/developers/topics/permissions
         'integration_type': 0,
         'scope': 'bot+applications.commands',
-    }
-    invite_url = 'https://discord.com/oauth2/authorize?' + urllib.parse.urlencode(invite_url_params)
+    })
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
