@@ -65,6 +65,15 @@ class Embed(discord.Embed):
         return super().add_field(name=name, value=value, inline=inline)
 
 
+class ButtonModal(discord.ui.Button):
+    def __init__(self, modal, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.modal = modal
+
+    async def callback(self, interaction):
+        await interaction.response.send_modal(self.modal)
+
+
 def now(ms: bool = False, *, tz: str = 'Europe/Paris') -> datetime.datetime:
     time = datetime.datetime.now(ZoneInfo(tz))
     if not ms:

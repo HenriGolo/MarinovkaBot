@@ -3,6 +3,7 @@ import datetime
 import urllib.parse
 
 from features import *
+from features.sanitizer import Sanitizer
 from utilitaires import now
 from utilitaires.config import config
 
@@ -52,6 +53,7 @@ class MarinovkaBot(discord.AutoShardedBot):
     async def on_message(message: discord.Message):
         # lance une liste de coroutines en parallèle
         await asyncio.gather(
+            Sanitizer(message).sanitize()
         )
 
 
