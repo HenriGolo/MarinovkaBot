@@ -1,5 +1,5 @@
 import json
-from urllib.parse import urlsplit, SplitResult, parse_qs, urlunsplit, urlencode
+from urllib.parse import urlsplit, SplitResult, parse_qs, parse_qsl, urlunsplit, urlencode
 
 import discord
 
@@ -22,7 +22,12 @@ class AddException(discord.ui.DesignerModal):
         self.add_item(
             discord.ui.Label(
                 'Paramètre Autorisé',
-                item=discord.ui.InputText(required=True)
+                item=discord.ui.Select(
+                    options=[discord.SelectOption(label=q[0], description=q[1]) for url in urls for q in parse_qsl(url.query)],
+                    placeholder='Ajouter une query',
+                    required=True,
+                    max_values=len(sum((parse_qsl(url.query) for url in urls), []))
+                )
             )
         )
 
@@ -30,7 +35,7 @@ class AddException(discord.ui.DesignerModal):
         netloc = self.children[0].item.values[0]
         with open(Sanitizer.exceptions, 'r') as file:
             exceptions = json.load(file, **config.json_format)
-        exceptions[netloc] = list(set(exceptions.get(netloc, []) + [self.children[1].item.value]))
+        exceptions[netloc] = list(set(exceptions.get(netloc, []) + self.children[1].item.values))
         with open(Sanitizer.exceptions, 'w') as file:
             json.dump(exceptions, file, **config.json_format)
         await interaction.respond(
@@ -106,7 +111,7 @@ class Sanitizer:
                     view.add_item(discord.ui.Button(**kwargs))
                 if view.children:
                     title = "Ajouter des Exceptions"
-                    view.add_item(ButtonModal(AddException(surls, title=title), label=title))
+                    view.add_item(ButtonModal(AddException(urls, title=title), label=title))
                     if message is None:
                         await self.message.reply(embed=embed, view=view, mention_author=False, silent=True)
                     else:
