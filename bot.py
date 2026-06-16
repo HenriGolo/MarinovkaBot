@@ -18,10 +18,17 @@ class MarinovkaBot(discord.AutoShardedBot):
             self.add_cog(cog(self))
 
     async def close(self):
-        await config.channel_logs.send(f"Terminaison en douceur, uptime {now(True) - self.start_time}")
-        await config.channel_logs.archive(True)
-        if int(config.get('DELETE_THREAD', 0)):
+        # L'environnement indique de supprimer le thread
+        config_delete = int(config.get('DELETE_THREAD', 0))
+        # Le thread est vide (juste 1 message : celui de boot)
+        aucun_message = len(await config.channel_logs.history(limit=2).flatten()) <= 1
+        # Supprimer le thread pour ne garder que les logs intéressants
+        if config_delete or aucun_message:
             await config.channel_logs.delete()
+        # Sinon archiver proprement
+        else:
+            await config.channel_logs.send(f"Terminaison en douceur, uptime {now(True) - self.start_time}")
+            await config.channel_logs.archive(True)
         await super().close()
 
     async def on_ready(self):
