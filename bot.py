@@ -71,6 +71,10 @@ class MarinovkaBot(discord.AutoShardedBot):
                 await self.user.edit(username=after.nick)
                 await after.edit(nick=None)
 
+    @staticmethod
+    async def on_thread_create(thread: discord.Thread):
+        await thread.join()
+
 
 if __name__ == '__main__':
     MarinovkaBot(intents=discord.Intents.all()).run(token=config['TOKEN'])
