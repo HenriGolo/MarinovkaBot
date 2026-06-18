@@ -8,7 +8,7 @@ from utilitaires import now
 from utilitaires.config import config
 
 
-class MarinovkaBot(discord.AutoShardedBot):
+class MarinovkaBot(discord.Bot):
     start_time: datetime.datetime
     invite_url: str
 

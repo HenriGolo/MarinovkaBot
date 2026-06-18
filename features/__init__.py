@@ -12,7 +12,7 @@ from utilitaires.decorateurs import logger
 
 
 class MarinovCog(discord.Cog):
-    def __init__(self, bot: discord.AutoShardedBot):
+    def __init__(self, bot: discord.Bot):
         self.bot = bot
 
 
