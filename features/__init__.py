@@ -3,23 +3,34 @@ import io
 import aiohttp
 import discord
 from discord import ApplicationContext as AppCtx
-from discord.ext import commands
+from discord.ext import tasks, commands
 
+from features import xkcd
+from utilitaires import now
 from utilitaires.config import config
 from utilitaires.decorateurs import logger
 
 
 class MarinovCog(discord.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: discord.AutoShardedBot):
         self.bot = bot
 
 
-class HelloWorld(MarinovCog):
-    @commands.slash_command(name="ping", description="ping pong", guild_ids=[int(config['GUILD_ID'])])
-    @logger
-    async def ping(self, ctx: AppCtx):
-        await ctx.defer(ephemeral=True)
-        await ctx.respond("pong")
+class Repetitions(MarinovCog):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.random_xkcd_comic.start()
+
+    # à minuit heure de paris
+    @tasks.loop(time=now().replace(hour=6, minute=0, second=0).time())
+    async def random_xkcd_comic(self):
+        await self.bot.wait_until_ready()
+        comic = await xkcd.Comic.get_random_comic()
+        embed = comic.as_embed()
+        marinovka = await self.bot.fetch_guild(config['GUILD_ID'])
+        channel = await marinovka.fetch_channel(config['CHANNEL_ID_XKCD'])
+        view = discord.ui.View(discord.ui.Button(label="Voir sur xkcd", url=comic.url))
+        await channel.send(embed=embed, view=view)
 
 
 class Customisation(MarinovCog):
