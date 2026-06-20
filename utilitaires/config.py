@@ -8,12 +8,12 @@ import dotenv
 class Config:
     def __init__(self, envs):
         self.values = {
+            **os.environ,
             **{
                 k: v
                 for env in envs
                 for k, v in dotenv.dotenv_values(env).items()
             },
-            **os.environ,
         }
         self.channel_logs: discord.Thread = None
         self.json_format = {}
