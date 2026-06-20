@@ -32,7 +32,7 @@ class ANSI(Converter):
     Coloration ANSI facilitée par des balises
     """
     @classmethod
-    def converter(cls, argument: str):
+    def converter(cls, argument: str) -> str:
         if not argument.strip():
             return argument
 
