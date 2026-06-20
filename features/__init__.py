@@ -45,7 +45,7 @@ class Customisation(MarinovCog):
         if avatar_url or banner_url:
             async with aiohttp.ClientSession() as session:
                 if avatar_url:
-                    async with session.get(marinovka.icon.url) as resp:
+                    async with session.get(avatar_url) as resp:
                         img = await resp.read()
                         with io.BytesIO(img) as file:
                             kwargs['avatar'] = file.getvalue()
