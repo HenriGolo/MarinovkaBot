@@ -17,6 +17,8 @@ class Config:
         }
         self.channel_logs: discord.Thread = None
         self.json_format = {}
+        _debug = self.values.get('DEBUG', '0')
+        self.debug = bool(int(_debug) if _debug.isnumeric() else 0)
 
     def __getitem__(self, item):
         return self.values[item]

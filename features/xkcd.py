@@ -28,9 +28,7 @@ class Comic:
     @staticmethod
     async def get_max_number() -> int:
         async with aiohttp.ClientSession() as session:
-            print(session)
             async with session.get(Comic.API_URL.format(number='')) as response:
-                print(response)
                 return (await response.json())['num']
 
     @staticmethod

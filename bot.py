@@ -54,7 +54,8 @@ class MarinovkaBot(discord.Bot):
         await self.change_presence(activity=activity)
 
         # Print dans la console
-        print(f"Connecté en tant que {self.user}")
+        if config.debug:
+            print(f"Connecté en tant que {self.user}")
 
     @staticmethod
     async def on_message(message: discord.Message):
