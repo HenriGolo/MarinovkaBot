@@ -1,3 +1,4 @@
+import asyncio
 import copy
 from urllib.parse import urlsplit, SplitResult, parse_qs, parse_qsl, urlunsplit, urlencode
 
@@ -298,4 +299,5 @@ class SanitizeCog(MarinovCog):
     async def render(self, ctx: discord.ApplicationContext, message: discord.Message, sanitized: discord.Message = None):
         sanitizer = Sanitizer(message)
         await ctx.response.send_modal(RenderLink(sanitizer.extract(), title="Rendu des liens"))
+        await asyncio.sleep(20)  # Attendre que l'utilisateur remplisse le modal
         await sanitizer.sanitize(sanitized)
