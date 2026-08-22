@@ -84,3 +84,6 @@ def now(ms: bool = False, *, tz: str = 'Europe/Paris') -> datetime.datetime:
 def fail(*args, **kwargs) -> str:
     # Juste du formatage
     return f"\n{traceback.format_exc(*args, **kwargs)}\n\n"
+
+
+minuit = now(ms=False).replace(second=1, minute=0, hour=0).time()
