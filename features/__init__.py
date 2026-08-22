@@ -6,6 +6,7 @@ import discord
 from discord import ApplicationContext as AppCtx
 from discord.ext import tasks, commands
 
+import utilitaires
 from features import xkcd
 from utilitaires import now
 from utilitaires.config import config
@@ -23,13 +24,12 @@ class MarinovCog(discord.Cog):
 class Repetitions(MarinovCog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.random_xkcd_comic.start()
+        # self.random_xkcd_comic.start() # Désactivé, remplacé par https://github.com/HenriGolo/LulusFrens
 
-    # à minuit heure de paris
-    @tasks.loop(time=now().replace(hour=6, minute=0, second=0).time())
+    @tasks.loop(time=utilitaires.minuit)
     async def random_xkcd_comic(self):
         await self.bot.wait_until_ready()
-        comic = await xkcd.Comic.get_random_comic()
+        comic = await xkcd.Comic.get_random_comic(xkcd.Comic.get_weighted_random_comic)
         embed = comic.as_embed()
         marinovka = await self.bot.fetch_guild(config['GUILD_ID'])
         channel = await marinovka.fetch_channel(config['CHANNEL_ID_XKCD'])
