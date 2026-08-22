@@ -1,4 +1,5 @@
 import datetime
+import inspect
 import random
 
 import aiohttp
@@ -36,8 +37,19 @@ class Comic:
         return random.randint(1, await Comic.get_max_number())
 
     @staticmethod
-    async def get_random_comic() -> 'Comic':
-        return await Comic(await Comic.get_random_number()).fetch()
+    async def get_weighted_random_comic() -> 'Comic':
+        max_number = await Comic.get_max_number()
+        # Plus grande probabilité pour les numéros récents
+        weights = [1 / (max_number - i + 1) for i in range(max_number)]
+        number = random.choices(range(1, max_number + 1), weights=weights)[0]
+        return await Comic(number).fetch()
+
+    @staticmethod
+    async def get_random_comic(rng=None) -> 'Comic':
+        if rng is None:
+            rng = Comic.get_random_number
+        random_number = await rng() if inspect.iscoroutinefunction(rng) else rng()
+        return await Comic(random_number).fetch()
 
     def as_embed(self) -> Embed:
         timestamp = datetime.datetime.strptime(f"{self['year']}-{self['month']}-{self['day']}", '%Y-%m-%d')
