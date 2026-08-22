@@ -1,5 +1,3 @@
-import asyncio
-import copy
 from urllib.parse import urlsplit, SplitResult, parse_qs, parse_qsl, urlunsplit, urlencode
 
 import discord
@@ -31,8 +29,13 @@ def short_netloc(netloc: str):
 
 
 class RerunSanitize(discord.ui.Button):
+    def __init__(self, *args, **kwargs):
+        kwargs['custom_id'] = kwargs.get('custom_id', 'rerun_sanitize')
+        super().__init__(*args, **kwargs)
+
     async def callback(self, interaction: discord.Interaction):
         await Sanitizer.run(interaction.message)
+        await interaction.respond('Analyse des liens terminée', ephemeral=True, delete_after=3)
 
 
 class AddException(discord.ui.DesignerModal):
@@ -71,7 +74,7 @@ class AddException(discord.ui.DesignerModal):
     async def callback(self, interaction: discord.Interaction):
         netloc = self.children[0].item.values[0]
         short = short_netloc(netloc)
-        with Sanitizer.exceptions as exceptions:
+        with SanitizeView.exceptions as exceptions:
             exceptions[short] = list(set(exceptions.get(short, []) + self.children[1].item.values))
             await interaction.respond(
                 f"Liste des exceptions pour {short} : {', '.join(exceptions[short])}",
@@ -164,12 +167,75 @@ class RenderLink(discord.ui.DesignerModal):
                 renders[domain]['default'] = new_domain or alternative
             if not renders[domain]['default'] in renders[domain]['available']:
                 renders[domain]['available'] += [renders[domain]['default']]
+        await Sanitizer.run(interaction.message)
         return await interaction.respond(f'Rendu ajouté pour {domain} : {new_domain or alternative}', ephemeral=True)
 
 
-class Sanitizer:
+class SanitizeView(discord.ui.View):
     exceptions = Transaction(JsonStore(config.get('SANITIZER_WHITELIST', 'sanitize_whitelist.json')))
 
+    def __init__(self, raw_urls: list[SplitResult] = None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        urls = raw_urls or []
+        self.content = 'Liens sans trackers et mieux rendus (potentiellement trop fort)\n'
+        if urls:
+            with self.exceptions as exceptions:
+                surls: list[SplitResult] = list(map(lambda u: self._sanitize(u, exceptions), urls))
+            raw_surls = [surl._replace(netloc=short_netloc(surl.netloc)) for surl in surls]
+            different_render = False
+            for i, surl in enumerate(surls):
+                with RenderLink.renders as renders:
+                    if has_render := (sn := short_netloc(surl.netloc)) in renders:
+                        if (default := renders[sn].get('default')) is not None:
+                            different_render = True
+                            surl = surl._replace(netloc=default)
+                if not has_render and urlunsplit(surl) == urlunsplit(urls[i]):
+                    continue
+
+                url = urlunsplit(surl)
+                raw_surl = raw_surls[i]
+                self.content += f"{url}\n"
+                self.add_item(
+                    discord.ui.Button(
+                        url=urlunsplit(raw_surl),
+                        label=''.join(
+                            filter(
+                                lambda s: s != 'www',
+                                raw_surl.netloc.split('.')[:-1]
+                            )
+                        ),
+                    )
+                )
+            if self.children:
+                title = 'Ajouter des Exceptions'
+                if filtered := AddException.valid_urls(urls):
+                    self.add_item(ButtonModal(AddException(filtered, title=title), label=title))
+            if different_render:
+                title = 'Rendu des liens'
+                self.add_item(ButtonModal(RenderLink(urls, title=title), label=title))
+        self.add_item(RerunSanitize(label="Actualiser"))
+
+    @property
+    def empty(self) -> bool:
+        return len(self.children) <= 1  # RerunSanitize est toujours présent
+
+    @staticmethod
+    def _sanitize(url: SplitResult, exceptions: dict[str, list[str]]) -> SplitResult:
+        allowed = exceptions.get(short_netloc(url.netloc), [])
+        queries = {k: v for k, v in parse_qs(url.query).items() if k in allowed}
+        return url._replace(query=urlencode(queries, doseq=True))
+
+    async def on_timeout(self) -> None:
+        for child in self.children:
+            if hasattr(child, 'url') and child.url:
+                continue
+            child.disabled = True
+        await super().on_timeout()
+        if hasattr(self, 'message'):
+            await self.message.edit(view=self)
+
+
+class Sanitizer:
     def __init__(self, message: discord.Message):
         self.message = message
 
@@ -182,10 +248,10 @@ class Sanitizer:
         return urls
 
     @staticmethod
-    async def run(message: discord.Message):
+    async def run(sanitized_message: discord.Message):
         try:
-            source = await message.channel.fetch_message(message.reference.message_id)
-            await Sanitizer(source).sanitize(message=message)
+            source = await sanitized_message.channel.fetch_message(sanitized_message.reference.message_id)
+            await Sanitizer(source).sanitize(message=sanitized_message)
         except Exception:
             await config.channel_logs.send(
                 embed=Embed(
@@ -195,75 +261,40 @@ class Sanitizer:
                 )
             )
 
-    @staticmethod
-    def _sanitize(url: SplitResult, exceptions: dict[str, list[str]]) -> SplitResult:
-        allowed = exceptions.get(short_netloc(url.netloc), [])
-        queries = {k: v for k, v in parse_qs(url.query).items() if k in allowed}
-        return url._replace(query=urlencode(queries, doseq=True))
-
     # Update le message passé en paramètre, ou en crée un nouveau
     async def sanitize(self, *, message: discord.Message = None) -> discord.Message | None:
+        msg = None
         if not self.message.author.bot:
             urls = self.extract()
             if urls:
-                content = 'Liens sans trackers et mieux rendus (potentiellement trop fort)\n'
-                view = discord.ui.View()
-                with self.exceptions as exceptions:
-                    surls: list[SplitResult] = list(map(lambda u: self._sanitize(u, exceptions), urls))
-                raw_surls = [surl._replace(netloc=short_netloc(surl.netloc)) for surl in surls]
-                different_render = False
-                for i, surl in enumerate(surls):
-                    with RenderLink.renders as renders:
-                        if has_render := (sn := short_netloc(surl.netloc)) in renders:
-                            if (default := renders[sn].get('default')) is not None:
-                                different_render = True
-                                surl = surl._replace(netloc=default)
-                    if not has_render and urlunsplit(surl) == urlunsplit(urls[i]):
-                        continue
-
-                    url = urlunsplit(surl)
-                    raw_surl = raw_surls[i]
-                    content += f"{url}\n"
-                    view.add_item(
-                        discord.ui.Button(
-                            url=urlunsplit(raw_surl),
-                            label=''.join(
-                                filter(
-                                    lambda s: s != 'www',
-                                    raw_surl.netloc.split('.')[:-1]
-                                )
-                            )
-                        )
-                    )
-                if view.children:
-                    title = 'Ajouter des Exceptions'
-                    if filtered := AddException.valid_urls(urls):
-                        view.add_item(ButtonModal(AddException(filtered, title=title), label=title))
-                if different_render:
-                    title = 'Rendu des liens'
-                    view.add_item(ButtonModal(RenderLink(urls, title=title), label=title))
-                if view.children:
-                    view.add_item(RerunSanitize(label="Actualiser"))
+                view = SanitizeView(urls)
+                if not view.empty:
                     if message is None:
-                        return await self.message.reply(content, view=view, mention_author=False, silent=True)
+                        msg = await self.message.reply(view.content, view=view, mention_author=False, silent=True)
                     else:
-                        return await message.edit(content=content, view=view)
+                        msg = await message.edit(content=content, view=view)
                 elif message is None:
-                    return await self.message.reply(
+                    msg = await self.message.reply(
                         "C'est bien, tu as nettoyé tes liens",
                         silent=True,
                         mention_author=False,
                         delete_after=1
                     )
                 else:
-                    return await message.delete()
-        return None
+                    await message.delete()
+                if msg:
+                    setattr(view, 'message', msg)
+        return msg
 
 
 class SanitizeCog(MarinovCog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.clean_sanitizer_db.start()
+
+    @staticmethod
+    async def on_message(message: discord.Message):
+        await Sanitizer(message).sanitize()
 
     @tasks.loop(time=utilitaires.minuit)
     async def clean_sanitizer_db(self):
@@ -284,7 +315,7 @@ class SanitizeCog(MarinovCog):
                 # Ajoute l'entrée par défaut à la liste des entrées disponibles si ce n'est pas fait
                 if not data['default'] in available:
                     renders[url]['available'] += [data['default']]
-        with Sanitizer.exceptions as exceptions:
+        with SanitizeView.exceptions as exceptions:
             for url, queries in exceptions.items():
                 # Supprime l'entrée si aucune query n'est disponible
                 if not queries:
@@ -296,8 +327,16 @@ class SanitizeCog(MarinovCog):
                     exceptions[url] = list(as_set)
 
     @commands.slash_command()
-    async def render(self, ctx: discord.ApplicationContext, message: discord.Message, sanitized: discord.Message = None):
+    @discord.option(name="message", description="Message original à re-analyser")
+    @discord.option(name="sanitized", description="Message produit à mettre à jour")
+    async def render(self, ctx: discord.ApplicationContext, message: discord.Message,
+                     sanitized: discord.Message = None):
         sanitizer = Sanitizer(message)
-        await ctx.response.send_modal(RenderLink(sanitizer.extract(), title="Rendu des liens"))
-        await asyncio.sleep(20)  # Attendre que l'utilisateur remplisse le modal
-        await sanitizer.sanitize(sanitized)
+        if urls := sanitizer.extract():
+            await ctx.response.send_modal(RenderLink(urls, title="Rendu des liens"))
+        else:
+            await ctx.respond(
+                "Le message est déjà propre et rendu. "
+                "Utiliser </render:1540677017245188107> pour ajouter des domaines de rendu",
+                ephemeral=True
+            )
