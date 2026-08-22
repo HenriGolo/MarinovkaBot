@@ -103,7 +103,7 @@ class RenderLink(discord.ui.DesignerModal):
             alternatives = [
                 link
                 for url in urls
-                for link in renders.get(short_netloc(url.netloc), []).get('available', [])
+                for link in renders.get(short_netloc(url.netloc), {}).get('available', [])
             ]
         if alternatives:
             default_checkbox = False
