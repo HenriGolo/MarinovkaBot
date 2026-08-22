@@ -1,6 +1,6 @@
 from functools import wraps
 
-from .config import config
+from utilitaires.config import config
 from utilitaires import fail, Embed, now
 from utilitaires.converters import ANSI
 
