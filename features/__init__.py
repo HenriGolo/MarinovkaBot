@@ -1,3 +1,4 @@
+import inspect
 import io
 
 import aiohttp
@@ -14,6 +15,9 @@ from utilitaires.decorateurs import logger
 class MarinovCog(discord.Cog):
     def __init__(self, bot: discord.Bot):
         self.bot = bot
+        for name, method in inspect.getmembers(self):
+            if inspect.iscoroutinefunction(method) and name.startswith("on_"):
+                bot.add_listener(method, name)
 
 
 class Repetitions(MarinovCog):
