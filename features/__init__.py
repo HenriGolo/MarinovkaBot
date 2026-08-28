@@ -4,12 +4,8 @@ import io
 import aiohttp
 import discord
 from discord import ApplicationContext as AppCtx
-from discord.ext import tasks, commands
+from discord.ext import commands
 
-import utilitaires
-from features import xkcd
-from utilitaires import now
-from utilitaires.config import config
 from utilitaires.decorateurs import logger
 
 
