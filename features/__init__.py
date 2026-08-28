@@ -21,20 +21,21 @@ class MarinovCog(discord.Cog):
                 bot.add_listener(method, name)
 
 
-class Repetitions(MarinovCog):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # self.random_xkcd_comic.start() # Désactivé, remplacé par https://github.com/HenriGolo/LulusFrens
-
-    @tasks.loop(time=utilitaires.minuit)
-    async def random_xkcd_comic(self):
-        await self.bot.wait_until_ready()
-        comic = await xkcd.Comic.get_random_comic(xkcd.Comic.get_weighted_random_comic)
-        embed = comic.as_embed()
-        marinovka = await self.bot.fetch_guild(config['GUILD_ID'])
-        channel = await marinovka.fetch_channel(config['CHANNEL_ID_XKCD'])
-        view = discord.ui.View(discord.ui.Button(label="Voir sur xkcd", url=comic.url))
-        await channel.send(embed=embed, view=view)
+# Désactivé, cf features/xkcd.py - XKCD
+# class Repetitions(MarinovCog):
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         # self.random_xkcd_comic.start() # Désactivé, remplacé par https://github.com/HenriGolo/LulusFrens
+#
+#     @tasks.loop(time=utilitaires.minuit)
+#     async def random_xkcd_comic(self):
+#         await self.bot.wait_until_ready()
+#         comic = await xkcd.Comic.get_random_comic(xkcd.Comic.get_weighted_random_comic)
+#         embed = comic.as_embed()
+#         marinovka = await self.bot.fetch_guild(config['GUILD_ID'])
+#         channel = await marinovka.fetch_channel(config['CHANNEL_ID_XKCD'])
+#         view = discord.ui.View(discord.ui.Button(label="Voir sur xkcd", url=comic.url))
+#         await channel.send(embed=embed, view=view)
 
 
 class Customisation(MarinovCog):
