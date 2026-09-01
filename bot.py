@@ -77,6 +77,7 @@ class MarinovkaBot(AutoAddedMarinovkaBot):
         marinovka = await self.fetch_guild(config['GUILD_ID'])
         channel_dev = await marinovka.fetch_channel(config['CHANNEL_ID_LOGS'])
         thread = await channel_dev.create_thread(name=f"Logs {self.start_time.replace(microsecond=0)}")
+        print(f'{thread=}')
         await thread.send(self.invite_url)
         config.set_log_channel(thread)
 
