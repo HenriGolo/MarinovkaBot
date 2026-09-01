@@ -226,13 +226,19 @@ class SanitizeView(discord.ui.View):
         return url._replace(query=urlencode(queries, doseq=True))
 
     async def on_timeout(self) -> None:
-        for child in self.children:
-            if hasattr(child, 'url') and child.url:
-                continue
-            child.disabled = True
         await super().on_timeout()
         if hasattr(self, 'message'):
-            await self.message.edit(view=self)
+            try:
+                await self.message.edit(
+                    view=discord.ui.View(
+                        *filter(
+                            lambda child: hasattr(child, 'url') and child.url,
+                            self.children
+                        )
+                    )
+                )
+            except discord.errors.NotFound:
+                pass
 
 
 class Sanitizer:
@@ -272,7 +278,7 @@ class Sanitizer:
                     if message is None:
                         msg = await self.message.reply(view.content, view=view, mention_author=False, silent=True)
                     else:
-                        msg = await message.edit(content=content, view=view)
+                        msg = await message.edit(content=view.content, view=view)
                 elif message is None:
                     msg = await self.message.reply(
                         "C'est bien, tu as nettoyé tes liens",
