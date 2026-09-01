@@ -88,13 +88,6 @@ class MarinovkaBot(AutoAddedMarinovkaBot):
         if config.debug:
             print(f"Connecté en tant que {self.user}")
 
-    @staticmethod
-    async def on_message(message: discord.Message):
-        # lance une liste de coroutines en parallèle
-        await asyncio.gather(
-            Sanitizer(message).sanitize()
-        )
-
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         if before.id == self.user.id:
             if after.nick is not None or after.display_name != self.user.name:
