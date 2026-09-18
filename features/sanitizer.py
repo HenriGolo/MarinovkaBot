@@ -304,8 +304,12 @@ class Sanitizer:
     async def webhook(self) -> discord.Webhook:
         webhook_name = self.WEBHOOK_NAME.format(bot_name=self.message.guild.me.display_name)
         for webhook in await self.message.channel.webhooks():
-            if webhook.name == webhook_name and webhook.user.id == self.message.guild.me.id:
-                return webhook
+            if webhook.user.id == self.message.guild.me.id:
+                if webhook.name == webhook_name:
+                    return webhook
+                elif webhook.name.endswith(self.WEBHOOK_NAME.format(bot_name='')):
+                    await webhook.edit(name=webhook_name)
+                    return webhook
         return await self.message.channel.create_webhook(
             name=webhook_name,
             avatar=await self.message.guild.me.avatar.read(),
