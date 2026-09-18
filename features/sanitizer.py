@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands, tasks
 
 import utilitaires
-from features import LulusCog
+from features import MarinovCog
 from utilitaires import Embed, ButtonModal, fail
 from utilitaires.config import config
 from utilitaires.json import Transaction, JsonStore
@@ -343,7 +343,7 @@ class Sanitizer:
         return msg
 
 
-class SanitizeCog(LulusCog):
+class SanitizeCog(MarinovCog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.clean_sanitizer_db.start()
