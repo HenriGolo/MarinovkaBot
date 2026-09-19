@@ -9,6 +9,10 @@ from utilitaires import Embed, ButtonModal, fail
 from utilitaires.config import config
 from utilitaires.json import Transaction, JsonStore
 
+RENDERS = Transaction(JsonStore(config.get('SANITIZER_RENDER', 'sanitize_render.json')))
+EXCEPTIONS = Transaction(JsonStore(config.get('SANITIZER_WHITELIST', 'sanitize_whitelist.json')))
+SHORT_NETLOCS = Transaction(JsonStore(config.get('SANITIZER_SHORT_NETLOCS', 'sanitize_short_netlocs.json')))
+
 
 def domain_select(urls: list[SplitResult], **kwargs):
     return discord.ui.Select(
@@ -22,10 +26,8 @@ def domain_select(urls: list[SplitResult], **kwargs):
 
 def short_netloc(netloc: str):
     filtered = netloc.replace('www.', '')
-    return {
-        'youtu.be': 'youtube.com',
-        'redd.it': 'reddit.com',
-    }.get(filtered, filtered)
+    with SHORT_NETLOCS as sn:
+        return sn.get(filtered, filtered)
 
 
 class RerunSanitize(discord.ui.Button):
@@ -74,7 +76,7 @@ class AddException(discord.ui.DesignerModal):
     async def callback(self, interaction: discord.Interaction):
         netloc = self.children[0].item.values[0]
         short = short_netloc(netloc)
-        with SanitizeView.exceptions as exceptions:
+        with EXCEPTIONS as exceptions:
             exceptions[short] = list(set(exceptions.get(short, []) + self.children[1].item.values))
             await interaction.respond(
                 f"Liste des exceptions pour {short} : {', '.join(exceptions[short])}",
@@ -86,8 +88,6 @@ class AddException(discord.ui.DesignerModal):
 
 
 class RenderLink(discord.ui.DesignerModal):
-    renders = Transaction(JsonStore(config.get('SANITIZER_RENDER', 'sanitize_render.json')))
-
     def __init__(self, urls, *args, sanitized_message: discord.Message = None, **kwargs):
         super().__init__(*args, **kwargs)
         index = -1
@@ -172,9 +172,119 @@ class RenderLink(discord.ui.DesignerModal):
         return await interaction.respond(f'Rendu ajouté pour {domain} : {new_domain or alternative}', ephemeral=True)
 
 
-class SanitizeView(discord.ui.View):
-    exceptions = Transaction(JsonStore(config.get('SANITIZER_WHITELIST', 'sanitize_whitelist.json')))
+class RenderSettingsRender(discord.ui.DesignerModal):
+    def __init__(self, domain: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.domain = domain
+        with RENDERS as renders:
+            domains = renders.get(self.domain, {}).get('available', [])
+        index = -1
+        if domains:
+            self.delete_domain_index = (index := index + 1)
+            self.add_item(
+                discord.ui.Label(
+                    "Supprimer un domaine de rendu",
+                    item=discord.ui.Select(
+                        options=[
+                            discord.SelectOption(label=domain)
+                            for domain in domains
+                        ],
+                        required=False,
+                        max_values=len(domains)
+                    )
+                )
+            )
+        self.add_domain_index = (index := index + 1)
+        self.add_item(
+            discord.ui.Label(
+                "Ajouter nouveau",
+                item=discord.ui.InputText(
+                    placeholder="Nom de domaine sans https:// ni www. séparés par un retour à la ligne",
+                    style=discord.InputTextStyle.long,
+                    required=False
+                )
+            )
+        )
+        self.default_index = (index := index + 1)
+        self.add_item(
+            discord.ui.Label(
+                "Définir par défaut",
+                item=discord.ui.Checkbox(default=not domains)
+            )
+        )
 
+    async def callback(self, interaction: discord.Interaction):
+        delete_domains = []
+        if hasattr(self, 'delete_domain_index'):
+            delete_domains = self.children[self.delete_domain_index].item.values
+        add_domains = list(map(str.strip, self.children[self.add_domain_index].item.value.splitlines()))
+        default = len(add_domains) == 1 and self.children[self.default_index].item
+        with RENDERS as renders:
+            old = renders.get(self.domain, {})
+            old_available = old.get('available', [])
+            old_default = old.get('default')
+            new = list(set(old_available) - set(delete_domains) | set(add_domains))
+            if new:
+                renders[self.domain] = {
+                    'available': new,
+                    'default': add_domains[0] if default else old_default
+                }
+                if not renders[self.domain]['default'] in renders[self.domain]['available']:
+                    renders[self.domain]['default'] = renders[self.domain]['available'][0]
+            else:
+                # Aucune entrée disponible, tout a été supprimé, on supprime le domaine
+                del renders[self.domain]
+        await interaction.respond("Paramètres mis à jour", ephemeral=True, delete_after=3)
+
+
+class RenderSettingsDomain(discord.ui.DesignerModal):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        with RENDERS as renders:
+            self.add_item(
+                discord.ui.Label(
+                    "Domaine",
+                    item=discord.ui.Select(
+                        options=[
+                            discord.SelectOption(label=domain)
+                            for domain in renders.keys()
+                        ],
+                        placeholder="Choisir un domaine",
+                        required=False
+                    )
+                )
+            )
+            self.add_item(
+                discord.ui.Label(
+                    'Ajouter Nouveau',
+                    item=discord.ui.InputText(
+                        placeholder='Nom de domaine sans https:// ni www.',
+                        required=False
+                    )
+                )
+            )
+
+    async def callback(self, interaction: discord.Interaction):
+        domains = list(filter(bool, [self.children[1].item.value.strip(), *self.children[0].item.values]))
+        await interaction.respond(
+            f"Domaines sélectionnés **{', '.join(domains)}**",
+            view=discord.ui.View(
+                *[
+                    ButtonModal(
+                        RenderSettingsRender(
+                            domain,
+                            title=f"Domaines de rendu pour {domain}"
+                        ),
+                        label=domain
+                    )
+                    for domain in domains
+                ]
+            ),
+            ephemeral=True
+        )
+
+
+class SanitizeView(discord.ui.View):
     def __init__(self, raw_urls: list[SplitResult], sanitizer, *args, **kwargs):
         super().__init__(*args, **kwargs)
         urls = raw_urls or []
@@ -187,7 +297,7 @@ class SanitizeView(discord.ui.View):
                 surls: list[SplitResult] = list(map(lambda u: self._sanitize(u, exceptions), urls))
             raw_surls = [surl._replace(netloc=short_netloc(surl.netloc)) for surl in surls]
             for i, surl in enumerate(surls):
-                with RenderLink.renders as renders:
+                with RENDERS as renders:
                     if has_render := (sn := short_netloc(surl.netloc)) in renders:
                         self._renders += 1
                         if (default := renders[sn].get('default')) is not None:
@@ -358,7 +468,7 @@ class SanitizeCog(MarinovCog):
 
     @tasks.loop(time=utilitaires.minuit)
     async def clean_sanitizer_db(self):
-        with RenderLink.renders as renders:
+        with RENDERS as renders:
             for url, data in renders.items():
                 # Supprime l'entrée si aucune URL n'est disponible
                 if not data.get('available'):
@@ -375,7 +485,7 @@ class SanitizeCog(MarinovCog):
                 # Ajoute l'entrée par défaut à la liste des entrées disponibles si ce n'est pas fait
                 if not data['default'] in available:
                     renders[url]['available'] += [data['default']]
-        with SanitizeView.exceptions as exceptions:
+        with EXCEPTIONS as exceptions:
             for url, queries in exceptions.items():
                 # Supprime l'entrée si aucune query n'est disponible
                 if not queries:
@@ -386,7 +496,7 @@ class SanitizeCog(MarinovCog):
                 if len(as_set) != len(as_list):
                     exceptions[url] = list(as_set)
 
-    @commands.slash_command()
+    @commands.slash_command(description="Renouvelle le rendu des liens")
     @discord.option(name="message", description="Message original à re-analyser")
     @discord.option(name="sanitized", description="Message produit à mettre à jour")
     async def render(self, ctx: discord.ApplicationContext, message: discord.Message,
@@ -396,5 +506,13 @@ class SanitizeCog(MarinovCog):
                 Sanitizer(message).extract(),
                 sanitized_message=sanitized,
                 title="Rendu des liens"
+            )
+        )
+
+    @commands.slash_command(description="Affiche les paramètres du sanitizer")
+    async def render_settings(self, ctx: discord.ApplicationContext):
+        await ctx.response.send_modal(
+            RenderSettingsDomain(
+                title="Sélectionner un nom de domaine"
             )
         )
