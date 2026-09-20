@@ -104,7 +104,7 @@ class RenderLink(discord.ui.DesignerModal):
             )
         )
         default_checkbox = True
-        with self.renders as renders:
+        with RENDERS as renders:
             alternatives = [
                 link
                 for url in urls
@@ -161,7 +161,7 @@ class RenderLink(discord.ui.DesignerModal):
         # Vérifie qu'un lien alternatif ou un nouveau domaine a été fourni
         if not alternative and not new_domain:
             return await interaction.respond('Il faut renseigner un domaine existant ou un nouveau', ephemeral=True)
-        with self.renders as renders:
+        with RENDERS as renders:
             renders[domain] = renders.get(domain, {})
             renders[domain]['available'] = list(set(renders[domain].get('available', []) + [new_domain or alternative]))
             if default or not renders[domain].get('default'):
@@ -293,7 +293,7 @@ class SanitizeView(discord.ui.View):
         self._queries = 0
         self._renders = 0
         if urls:
-            with self.exceptions as exceptions:
+            with EXCEPTIONS as exceptions:
                 surls: list[SplitResult] = list(map(lambda u: self._sanitize(u, exceptions), urls))
             raw_surls = [surl._replace(netloc=short_netloc(surl.netloc)) for surl in surls]
             for i, surl in enumerate(surls):
