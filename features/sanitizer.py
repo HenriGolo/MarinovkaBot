@@ -241,19 +241,20 @@ class RenderSettingsDomain(discord.ui.DesignerModal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         with RENDERS as renders:
-            self.add_item(
-                discord.ui.Label(
-                    "Domaine",
-                    item=discord.ui.Select(
-                        options=[
-                            discord.SelectOption(label=domain)
-                            for domain in renders.keys()
-                        ],
-                        placeholder="Choisir un domaine",
-                        required=False
+            if renders:
+                self.add_item(
+                    discord.ui.Label(
+                        "Domaine",
+                        item=discord.ui.Select(
+                            options=[
+                                discord.SelectOption(label=domain)
+                                for domain in renders.keys()
+                            ],
+                            placeholder="Choisir un domaine",
+                            required=False
+                        )
                     )
                 )
-            )
             self.add_item(
                 discord.ui.Label(
                     'Ajouter Nouveau',
