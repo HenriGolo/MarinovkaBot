@@ -472,11 +472,10 @@ class SanitizeCog(MarinovCog):
         with RENDERS as renders:
             for url, data in renders.items():
                 # Supprime l'entrée si aucune URL n'est disponible
-                if not data.get('available'):
+                if not (available := data.get('available')):
                     del renders[url]
                     continue
                 # Supprime les doublons dans la liste des entrées disponibles
-                available = data['available']
                 as_set, as_list = set(available), list(available)
                 if len(as_set) != len(as_list):
                     renders[url]['available'] = list(as_set)
@@ -484,8 +483,8 @@ class SanitizeCog(MarinovCog):
                 if not data.get('default'):
                     renders[url]['default'] = available[0]
                 # Ajoute l'entrée par défaut à la liste des entrées disponibles si ce n'est pas fait
-                if not data['default'] in available:
-                    renders[url]['available'] += [data['default']]
+                if not (default := renders[url]['default']) in available:
+                    renders[url]['available'] += [default]
         with EXCEPTIONS as exceptions:
             for url, queries in exceptions.items():
                 # Supprime l'entrée si aucune query n'est disponible
