@@ -240,8 +240,10 @@ class RenderSettingsRender(discord.ui.DesignerModal):
 class RenderSettingsDomain(discord.ui.DesignerModal):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        index = -1
         with RENDERS as renders:
             if renders:
+                self.domain_index = (index := index + 1)
                 self.add_item(
                     discord.ui.Label(
                         "Domaine",
@@ -255,6 +257,7 @@ class RenderSettingsDomain(discord.ui.DesignerModal):
                         )
                     )
                 )
+            self.new_domain_index = (index := index + 1)
             self.add_item(
                 discord.ui.Label(
                     'Ajouter Nouveau',
@@ -266,7 +269,18 @@ class RenderSettingsDomain(discord.ui.DesignerModal):
             )
 
     async def callback(self, interaction: discord.Interaction):
-        domains = list(filter(bool, [self.children[1].item.value.strip(), *self.children[0].item.values]))
+        domains = list(
+            filter(
+                bool,
+                [
+                    self.children[self.new_domain_index].item.value.strip(),
+                    *self.children[self.domain_index].item.values
+                ]
+                if hasattr(self, 'domain_index') else [
+                    self.children[self.new_domain_index].item.value.strip()
+                ]
+            )
+        )
         await interaction.respond(
             f"Domaines sélectionnés **{', '.join(domains)}**",
             view=discord.ui.View(
