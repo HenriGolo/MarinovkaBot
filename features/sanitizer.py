@@ -7,6 +7,7 @@ import utilitaires
 from features import MarinovCog
 from utilitaires import Embed, ButtonModal, fail
 from utilitaires.config import config
+from utilitaires.decorateurs import logger
 from utilitaires.json import Transaction, JsonStore
 
 RENDERS = Transaction(JsonStore(config.get('SANITIZER_RENDER', 'sanitize_render.json')))
@@ -508,6 +509,7 @@ class SanitizeCog(MarinovCog):
     @commands.slash_command(description="Renouvelle le rendu des liens")
     @discord.option(name="message", description="Message original à re-analyser")
     @discord.option(name="sanitized", description="Message produit à mettre à jour")
+    @logger
     async def render(self, ctx: discord.ApplicationContext, message: discord.Message,
                      sanitized: discord.Message = None):
         await ctx.response.send_modal(
@@ -519,6 +521,7 @@ class SanitizeCog(MarinovCog):
         )
 
     @commands.slash_command(description="Affiche les paramètres du sanitizer")
+    @logger
     async def render_settings(self, ctx: discord.ApplicationContext):
         await ctx.response.send_modal(
             RenderSettingsDomain(

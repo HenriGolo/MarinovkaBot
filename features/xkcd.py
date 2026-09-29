@@ -10,6 +10,7 @@ import utilitaires
 from features import MarinovCog
 from utilitaires import Embed
 from utilitaires.config import config
+from utilitaires.decorateurs import logger
 
 
 class Comic:
@@ -111,6 +112,7 @@ class XKCD(MarinovCog):
 
     @commands.slash_command(description='Affiche un comic xkcd aléatoire ou par numéro')
     @discord.option(name='number', description='Le numéro du comic xkcd à afficher. Aléatoire si non spécifié.')
+    @logger
     async def xkcd(self, ctx: discord.ApplicationContext, number: int = None):
         await ctx.defer()
         comic = await Comic(number).fetch()
