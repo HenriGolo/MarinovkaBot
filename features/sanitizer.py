@@ -265,24 +265,16 @@ class RenderSettingsDomain(discord.ui.DesignerModal):
                     'Ajouter Nouveau',
                     item=discord.ui.InputText(
                         placeholder='Nom de domaine sans https:// ni www.',
-                        required=False
+                        required=False,
+                        style=discord.InputTextStyle.long
                     )
                 )
             )
 
     async def callback(self, interaction: discord.Interaction):
-        domains = list(
-            filter(
-                bool,
-                [
-                    self.children[self.new_domain_index].item.value.strip(),
-                    *self.children[self.domain_index].item.values
-                ]
-                if hasattr(self, 'domain_index') else [
-                    self.children[self.new_domain_index].item.value.strip()
-                ]
-            )
-        )
+        domains = set(map(str.strip, self.children[self.new_domain_index].item.value.splitlines()))
+        if hasattr(self, 'domain_index'):
+            domains.update(self.children[self.domain_index].item.values)
         await interaction.respond(
             f"Domaines sélectionnés **{', '.join(domains)}**",
             view=discord.ui.View(
