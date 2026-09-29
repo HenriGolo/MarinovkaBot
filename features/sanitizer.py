@@ -490,7 +490,7 @@ class SanitizeCog(MarinovCog):
                     renders[url]['available'] = list(as_set)
                 # Définit une entrée par défaut si ce n'est pas fait
                 if not data.get('default'):
-                    renders[url]['default'] = available[0]
+                    renders[url]['default'] = renders[url]['available'][0]
                 # Ajoute l'entrée par défaut à la liste des entrées disponibles si ce n'est pas fait
                 if not (default := renders[url]['default']) in available:
                     renders[url]['available'] += [default]
