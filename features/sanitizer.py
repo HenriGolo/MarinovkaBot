@@ -173,8 +173,9 @@ class RenderLink(discord.ui.DesignerModal):
 
 
 class RenderSettingsRender(discord.ui.DesignerModal):
-    def __init__(self, domain: str, *args, **kwargs):
+    def __init__(self, domain: str, can_delete: bool = False, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.can_delete = can_delete
         self.domain = domain
         with RENDERS as renders:
             domains = renders.get(self.domain, {}).get('available', [])
@@ -214,9 +215,9 @@ class RenderSettingsRender(discord.ui.DesignerModal):
         )
 
     async def callback(self, interaction: discord.Interaction):
-        delete_domains = []
-        if hasattr(self, 'delete_domain_index'):
-            delete_domains = self.children[self.delete_domain_index].item.values
+        delete_domains = set()
+        if hasattr(self, 'delete_domain_index') and self.can_delete:
+            delete_domains.update(self.children[self.delete_domain_index].item.values)
         add_domains = list(map(str.strip, self.children[self.add_domain_index].item.value.splitlines()))
         default = len(add_domains) == 1 and self.children[self.default_index].item
         with RENDERS as renders:
@@ -238,8 +239,9 @@ class RenderSettingsRender(discord.ui.DesignerModal):
 
 
 class RenderSettingsDomain(discord.ui.DesignerModal):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, can_delete: bool = False, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.can_delete = can_delete
         index = -1
         with RENDERS as renders:
             if renders:
@@ -288,6 +290,7 @@ class RenderSettingsDomain(discord.ui.DesignerModal):
                     ButtonModal(
                         RenderSettingsRender(
                             domain,
+                            can_delete=self.can_delete,
                             title=f"Domaines de rendu pour {domain}"
                         ),
                         label=domain
@@ -527,6 +530,7 @@ class SanitizeCog(MarinovCog):
     async def render_settings(self, ctx: discord.ApplicationContext):
         await ctx.response.send_modal(
             RenderSettingsDomain(
+                can_delete=await self.bot.is_owner(ctx.user),
                 title="Sélectionner un nom de domaine"
             )
         )
