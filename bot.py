@@ -6,8 +6,9 @@ import pkgutil
 import urllib.parse
 from pathlib import Path
 
+import discord
+
 from features import *
-from features.sanitizer import Sanitizer
 from utilitaires import now
 from utilitaires.config import config
 
@@ -78,6 +79,11 @@ class MarinovkaBot(AutoAddedMarinovkaBot):
         channel_dev = await marinovka.fetch_channel(config['CHANNEL_ID_LOGS'])
         thread = await channel_dev.create_thread(name=f"Logs {self.start_time.replace(microsecond=0)}")
         await thread.send(self.invite_url)
+        infos = await self.application_info()
+        owner = infos.owner if isinstance(infos.owner, discord.PartialMessageable) else infos.team.owner
+        owners = {owner, *filter(lambda tm: tm.role == discord.TeamRole.developer, infos.team.members)}
+        for user in owners:
+            await thread.add_user(user)
         config.set_log_channel(thread)
 
         # Message de statut du bot
