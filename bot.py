@@ -75,19 +75,21 @@ class MarinovkaBot(AutoAddedMarinovkaBot):
         })
 
         # Thread de logs
-        marinovka = await self.fetch_guild(config['GUILD_ID'])
-        channel_dev = await marinovka.fetch_channel(config['CHANNEL_ID_LOGS'])
-        thread = await channel_dev.create_thread(name=f"Logs {self.start_time.replace(microsecond=0)}")
-        await thread.send(self.invite_url)
+        guild = await self.fetch_guild(config['GUILD_ID'])
+        channel_dev = await guild.fetch_channel(config['CHANNEL_ID_LOGS'])
+        config.set_log_channel(await channel_dev.create_thread(name=f"Logs {self.start_time.replace(microsecond=0)}"))
+        await config.channel_logs.send(self.invite_url)
         infos = await self.application_info()
-        owner = infos.owner if isinstance(infos.owner, discord.PartialMessageable) else infos.team.owner
-        owners = {owner, *filter(lambda tm: tm.role == discord.TeamRole.developer, infos.team.members)}
-        for user in owners:
-            await thread.add_user(user)
-        config.set_log_channel(thread)
+        owner = infos.team and next(
+            filter(
+                lambda tm: tm.role == discord.TeamRole.owner,
+                infos.team.members
+            )
+        ) or infos.owner
+        await config.channel_logs.add_user(owner)
 
         # Message de statut du bot
-        activity = discord.Activity(name=marinovka.name, type=discord.ActivityType.watching)
+        activity = discord.Activity(name=guild.name, type=discord.ActivityType.watching)
         await self.change_presence(activity=activity)
 
         # Print dans la console
