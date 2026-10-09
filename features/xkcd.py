@@ -1,6 +1,7 @@
 import datetime
 import inspect
 import random
+from typing import Callable
 from zoneinfo import ZoneInfo
 
 import aiohttp
@@ -72,7 +73,7 @@ class Comic:
         return await cls(number).fetch()
 
     @classmethod
-    async def get_random_comic(cls, rng=None) -> 'Comic':
+    async def get_random_comic(cls, rng: Callable[[], int] = None) -> 'Comic':
         if rng is None:
             rng = cls.get_random_number
         random_number = await rng() if inspect.iscoroutinefunction(rng) else rng()
