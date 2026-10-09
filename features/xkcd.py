@@ -1,6 +1,7 @@
 import datetime
 import inspect
 import random
+from zoneinfo import ZoneInfo
 
 import aiohttp
 import discord
@@ -11,6 +12,9 @@ from features import MarinovCog
 from utilitaires import Embed
 from utilitaires.config import config
 from utilitaires.decorateurs import logger
+from utilitaires.json import Transaction, JsonStore
+
+COMIC_COOLDOWN = Transaction(JsonStore(config.get('XKCD_COOLDOWN_STORAGE', 'xkcd_cooldown.json')))
 
 
 class Comic:
@@ -99,16 +103,35 @@ class XKCD(MarinovCog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.random_xkcd_comic.start()
+        self.clear_cooldown.start()
 
     @tasks.loop(time=utilitaires.now().replace(hour=6, minute=0, second=0, microsecond=0).time())
     async def random_xkcd_comic(self):
         await self.bot.wait_until_ready()
         comic = await Comic.get_random_comic(Comic.get_weighted_random_number)
+        with COMIC_COOLDOWN as data:
+            while timestamp := data.get(comic.number):
+                last_date = datetime.datetime.fromtimestamp(timestamp, tz=ZoneInfo('Europe/Paris'))
+                if utilitaires.now() - last_date < datetime.timedelta(days=30):
+                    comic = await Comic.get_random_comic(Comic.get_weighted_random_number)
+            data[str(comic.number)] = utilitaires.now().timestamp()
         embed = comic.as_embed()
-        marinovka = await self.bot.fetch_guild(config['GUILD_ID'])
-        channel = await marinovka.fetch_channel(config['CHANNEL_ID_XKCD'])
+        guild = await self.bot.fetch_guild(config['GUILD_ID'])
+        channel = await guild.fetch_channel(config['CHANNEL_ID_XKCD'])
         view = discord.ui.View(discord.ui.Button(label="Voir sur xkcd", url=comic.url))
         await channel.send(embed=embed, view=view)
+
+    @tasks.loop(time=utilitaires.minuit)
+    async def clear_cooldown(self):
+        await self.bot.wait_until_ready()
+        number_comics = await Comic.get_max_number()
+        with COMIC_COOLDOWN as data:
+            print(data)
+            suppressions = int(number_comics / 10) * int(number_comics / 3 - len(data))
+            if suppressions > 0:
+                sorted_data = sorted(data.items(), key=lambda x: x[1])
+                for i in range(suppressions):
+                    del data[sorted_data[i][0]]
 
     @commands.slash_command(description='Affiche un comic xkcd aléatoire ou par numéro')
     @discord.option(name='number', description='Le numéro du comic xkcd à afficher. Aléatoire si non spécifié.')
