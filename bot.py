@@ -42,7 +42,7 @@ def generate_autoaddedbot_class(cogclass: type) -> type:
     return autoaddbot
 
 
-AutoAddedMarinovkaBot = generate_autoaddedbot_class(MarinovCog)
+AutoAddedMarinovkaBot = generate_autoaddedbot_class(BaseAutoAddedCog)
 
 
 class MarinovkaBot(AutoAddedMarinovkaBot):

@@ -9,7 +9,7 @@ import discord
 from discord.ext import tasks, commands
 
 import utilitaires
-from features import MarinovCog
+from features import BaseAutoAddedCog
 from utilitaires import Embed
 from utilitaires.config import config
 from utilitaires.decorateurs import logger
@@ -100,7 +100,7 @@ class Comic:
         }
 
 
-class XKCD(MarinovCog):
+class XKCD(BaseAutoAddedCog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.random_xkcd_comic.start()

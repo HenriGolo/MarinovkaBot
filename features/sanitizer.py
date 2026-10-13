@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands, tasks
 
 import utilitaires
-from features import MarinovCog
+from features import BaseAutoAddedCog
 from utilitaires import Embed, ButtonModal, fail
 from utilitaires.config import config
 from utilitaires.decorateurs import logger
@@ -468,7 +468,7 @@ class Sanitizer:
         return msg
 
 
-class SanitizeCog(MarinovCog):
+class SanitizeCog(BaseAutoAddedCog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.clean_sanitizer_db.start()

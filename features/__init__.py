@@ -9,7 +9,7 @@ from discord.ext import commands
 from utilitaires.decorateurs import logger
 
 
-class MarinovCog(discord.Cog):
+class BaseAutoAddedCog(discord.Cog):
     def __init__(self, bot: discord.Bot):
         self.bot = bot
         for name, method in inspect.getmembers(self):
