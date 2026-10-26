@@ -103,11 +103,9 @@ class DevConfig(BaseAutoAddedCog):
     async def access_logs(self, ctx: discord.ApplicationContext):
         await ctx.defer(ephemeral=True)
         infos = await self.bot.application_info()
-        allowed = infos.team and next(
-            filter(
-                lambda tm: tm.role in (discord.TeamRole.owner, discord.TeamRole.developer),
-                infos.team.members
-            )
+        allowed = infos.team and filter(
+            lambda tm: tm.role in (discord.TeamRole.owner, discord.TeamRole.developer),
+            infos.team.members
         ) or (infos.owner,)
         if ctx.user.id in map(lambda u: u.id, allowed):
             await config.channel_logs.add_user(ctx.user)
