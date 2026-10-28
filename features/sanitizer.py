@@ -439,7 +439,6 @@ class Sanitizer:
 
     async def webhook_send(self, *args, **kwargs):
         webhook = await self.get_webhook()
-        print(webhook)
         if isinstance(thread := self.message.channel, discord.Thread):
             kwargs['thread'] = thread
         return await webhook.send(*args, **kwargs)
