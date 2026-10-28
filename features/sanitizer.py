@@ -13,9 +13,11 @@ from utilitaires.json import Transaction, JsonStore
 RENDERS = Transaction(JsonStore(config.get('SANITIZER_RENDER', 'sanitize_render.json')))
 EXCEPTIONS = Transaction(JsonStore(config.get('SANITIZER_WHITELIST', 'sanitize_whitelist.json')))
 SHORT_NETLOCS = Transaction(JsonStore(config.get('SANITIZER_SHORT_NETLOCS', 'sanitize_short_netlocs.json')))
+EMBEDS_NOW_SHORTLIST = Transaction(JsonStore(config.get('SANITIZER_EMBEDS_NOW', 'sanitize_embeds_now.json')))
 
 
 def domain_select(urls: list[SplitResult], **kwargs):
+    kwargs['max_values'] = kwargs.get('max_values', len(urls))
     return discord.ui.Select(
         options=[
             discord.SelectOption(label=short_netloc(url.netloc), default=len(urls) == 1)
@@ -186,13 +188,14 @@ class RenderSettingsRender(discord.ui.DesignerModal):
             self.add_item(
                 discord.ui.Label(
                     "Supprimer un domaine de rendu",
-                    item=discord.ui.Select(
-                        options=[
-                            discord.SelectOption(label=domain)
-                            for domain in domains
-                        ],
-                        required=False,
-                        max_values=len(domains)
+                    item=domain_select(
+                        domains,
+                        # item=discord.ui.Select(
+                        #     options=[
+                        #         discord.SelectOption(label=domain)
+                        #         for domain in domains
+                        #     ],
+                        required=False
                     )
                 )
             )
@@ -256,7 +259,8 @@ class RenderSettingsDomain(discord.ui.DesignerModal):
                                 for domain in renders.keys()
                             ],
                             placeholder="Choisir un domaine",
-                            required=False
+                            required=False,
+                            max_values=len(renders.keys())
                         )
                     )
                 )
@@ -271,28 +275,46 @@ class RenderSettingsDomain(discord.ui.DesignerModal):
                     )
                 )
             )
+            self.use_embeds_now_index = (index := index + 1)
+            self.add_item(
+                discord.ui.Label(
+                    'Utiliser embeds.now pour ce domaine',
+                    item=discord.ui.Checkbox(
+                        default=False,
+                    )
+                )
+            )
 
     async def callback(self, interaction: discord.Interaction):
         domains = set(map(str.strip, self.children[self.new_domain_index].item.value.splitlines()))
         if hasattr(self, 'domain_index'):
             domains.update(self.children[self.domain_index].item.values)
-        await interaction.respond(
-            f"Domaines sélectionnés **{', '.join(domains)}**",
-            view=discord.ui.View(
-                *[
-                    ButtonModal(
-                        RenderSettingsRender(
-                            domain,
-                            can_delete=self.can_delete,
-                            title=f"Domaines de rendu pour {domain}"
-                        ),
-                        label=domain
-                    )
-                    for domain in domains
-                ]
-            ),
-            ephemeral=True
-        )
+        if self.children[self.use_embeds_now_index].item.value:
+            with EMBEDS_NOW_SHORTLIST as embeds_now:
+                embeds_now['available'] = list(set(embeds_now.get('available', [])) | domains)
+            await interaction.respond(
+                f"{', '.join(domains)} utilise maintenant https://embeds.now",
+                ephemeral=True,
+                delete_after=3
+            )
+        else:
+            await interaction.respond(
+                f"Domaines sélectionnés **{', '.join(domains)}**",
+                view=discord.ui.View(
+                    *[
+                        ButtonModal(
+                            RenderSettingsRender(
+                                domain,
+                                can_delete=self.can_delete,
+                                title=f"Domaines de rendu pour {domain}"
+                            ),
+                            label=domain
+                        )
+                        for domain in domains
+                    ]
+                ),
+                ephemeral=True
+            )
 
 
 class SanitizeView(discord.ui.View):
@@ -308,6 +330,9 @@ class SanitizeView(discord.ui.View):
                 surls: list[SplitResult] = list(map(lambda u: self._sanitize(u, exceptions), urls))
             raw_surls = [surl._replace(netloc=short_netloc(surl.netloc)) for surl in surls]
             for i, surl in enumerate(surls):
+                if netloc := self.shortlist_embed_now(surl.netloc):
+                    surl = surl._replace(netloc=f'embeds.now/{netloc}')
+                    self._renders += 1
                 with RENDERS as renders:
                     if has_render := (sn := short_netloc(surl.netloc)) in renders:
                         self._renders += 1
@@ -371,6 +396,14 @@ class SanitizeView(discord.ui.View):
         allowed = exceptions.get(short_netloc(url.netloc), [])
         queries = {k: v for k, v in parse_qs(url.query).items() if k in allowed}
         return url._replace(query=urlencode(queries, doseq=True))
+
+    @staticmethod
+    def shortlist_embed_now(netloc: str):
+        sn = short_netloc(netloc)
+        with EMBEDS_NOW_SHORTLIST as shortlist:
+            if sn in shortlist.get('available', []):
+                return sn
+            return None
 
     async def on_timeout(self) -> None:
         await super().on_timeout()
