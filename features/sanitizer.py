@@ -421,20 +421,28 @@ class Sanitizer:
                 )
             )
 
-    @property
-    async def webhook(self) -> discord.Webhook:
+    async def get_webhook(self) -> discord.Webhook:
         webhook_name = self.WEBHOOK_NAME.format(bot_name=self.message.guild.me.display_name)
-        for webhook in await self.message.channel.webhooks():
+        if isinstance(channel := self.message.channel, discord.Thread):
+            channel = channel.parent
+        for webhook in await channel.webhooks():
             if webhook.user.id == self.message.guild.me.id:
                 if webhook.name == webhook_name:
                     return webhook
                 elif webhook.name.endswith(self.WEBHOOK_NAME.format(bot_name='')):
                     await webhook.edit(name=webhook_name)
                     return webhook
-        return await self.message.channel.create_webhook(
+        return await channel.create_webhook(
             name=webhook_name,
             avatar=await self.message.guild.me.avatar.read(),
         )
+
+    async def webhook_send(self, *args, **kwargs):
+        webhook = await self.get_webhook()
+        print(webhook)
+        if isinstance(thread := self.message.channel, discord.Thread):
+            kwargs['thread'] = thread
+        return await webhook.send(*args, **kwargs)
 
     # Update le message passé en paramètre, ou en crée un nouveau
     async def sanitize(self, *, message: discord.Message = None) -> discord.Message | None:
@@ -445,7 +453,7 @@ class Sanitizer:
                 if not view.is_empty:
                     if message is None:
                         if self.url_only and not view.has_queries:
-                            msg = await (await self.webhook).send(
+                            msg = await self.webhook_send(
                                 content=view.url_content,
                                 view=view,
                                 username=self.message.author.display_name,
