@@ -28,7 +28,7 @@ def domain_select(urls: list[SplitResult], **kwargs):
 
 
 def short_netloc(netloc: str):
-    filtered = netloc.replace('www.', '')
+    filtered = netloc.replace('www.', '').replace('embeds.now/', '')
     with SHORT_NETLOCS as sn:
         return sn.get(filtered, filtered)
 
