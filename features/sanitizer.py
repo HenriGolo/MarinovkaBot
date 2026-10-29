@@ -305,7 +305,7 @@ class RenderSettingsDomain(discord.ui.DesignerModal):
                 ephemeral=True,
                 delete_after=3
             )
-        elif not self.children[self.stop_embeds_now_index].item.value:
+        elif self.children[self.stop_embeds_now_index].item.value:
             with EMBEDS_NOW_SHORTLIST as embeds_now:
                 embeds_now['available'] = list(set(embeds_now.get('available', [])) - domains)
             await interaction.respond(
