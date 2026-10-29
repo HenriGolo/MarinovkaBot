@@ -1,5 +1,6 @@
 import datetime
 import inspect
+import itertools
 import random
 from typing import Callable
 from zoneinfo import ZoneInfo
@@ -127,12 +128,11 @@ class XKCD(BaseAutoAddedCog):
         await self.bot.wait_until_ready()
         number_comics = await Comic.get_max_number()
         with COMIC_COOLDOWN as data:
-            print(data)
             suppressions = int(number_comics / 10) * int(number_comics / 3 - len(data))
             if suppressions > 0:
                 sorted_data = sorted(data.items(), key=lambda x: x[1])
-                for i in range(suppressions):
-                    del data[sorted_data[i][0]]
+                for xkcd, *_ in itertools.islice(sorted_data, suppressions):
+                    del data[xkcd]
 
     @commands.slash_command(description='Affiche un comic xkcd aléatoire ou par numéro')
     @discord.option(name='number', description='Le numéro du comic xkcd à afficher. Aléatoire si non spécifié.')
