@@ -188,14 +188,13 @@ class RenderSettingsRender(discord.ui.DesignerModal):
             self.add_item(
                 discord.ui.Label(
                     "Supprimer un domaine de rendu",
-                    item=domain_select(
-                        domains,
-                        # item=discord.ui.Select(
-                        #     options=[
-                        #         discord.SelectOption(label=domain)
-                        #         for domain in domains
-                        #     ],
-                        required=False
+                    item=discord.ui.Select(
+                        options=[
+                            discord.SelectOption(label=domain)
+                            for domain in domains
+                        ],
+                        required=False,
+                        max_values=len(domains)
                     )
                 )
             )
