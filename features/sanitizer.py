@@ -283,6 +283,15 @@ class RenderSettingsDomain(discord.ui.DesignerModal):
                     )
                 )
             )
+            self.stop_embeds_now_index = (index := index + 1)
+            self.add_item(
+                discord.ui.Label(
+                    "Arrêter d'utiliser embeds.now pour ce domaine",
+                    item=discord.ui.Checkbox(
+                        default=False,
+                    )
+                )
+            )
 
     async def callback(self, interaction: discord.Interaction):
         domains = set(map(str.strip, self.children[self.new_domain_index].item.value.splitlines()))
@@ -293,6 +302,14 @@ class RenderSettingsDomain(discord.ui.DesignerModal):
                 embeds_now['available'] = list(set(embeds_now.get('available', [])) | domains)
             await interaction.respond(
                 f"{', '.join(domains)} utilise maintenant https://embeds.now",
+                ephemeral=True,
+                delete_after=3
+            )
+        elif not self.children[self.stop_embeds_now_index].item.value:
+            with EMBEDS_NOW_SHORTLIST as embeds_now:
+                embeds_now['available'] = list(set(embeds_now.get('available', [])) - domains)
+            await interaction.respond(
+                f"{', '.join(domains)} n'utilise plus https://embeds.now",
                 ephemeral=True,
                 delete_after=3
             )
